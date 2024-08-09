@@ -8,11 +8,11 @@ EXPOSE 8081
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
-WORKDIR /src
-COPY ["TravelLite.SignalR/TravelLite.SignalR.csproj", "TravelLite.SignalR/"]
-RUN dotnet restore "./TravelLite.SignalR/TravelLite.SignalR.csproj"
-COPY . .
 WORKDIR "/src/TravelLite.SignalR"
+COPY ["./TravelLite.SignalR.csproj", "./"]
+RUN dotnet restore "./TravelLite.SignalR.csproj"
+COPY . .
+
 RUN dotnet build "./TravelLite.SignalR.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
