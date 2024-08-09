@@ -88,17 +88,15 @@ app.Run();
 
 
 // Context.ConnectionAborted is preserved during whole connection lifetime.
+[Authorize]
 public class Huh : Hub
 {
     public override async Task OnConnectedAsync()
     {
         Console.WriteLine($"Connected: {Context.ConnectionId}");
+        _ = FeedAsync(Clients.Caller, Context.ConnectionAborted);
     }
 
-    // BUG: Many invocations of the method will result in more messages being sent.
-    // Add multiclient support.
-    [Authorize]
-    public void Feed() => _ = FeedAsync(Clients.Caller, Context.ConnectionAborted);
     static async Task FeedAsync(IClientProxy client, CancellationToken cancellationToken)
     {
         string data;

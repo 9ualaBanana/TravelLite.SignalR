@@ -8,21 +8,21 @@ const App = () => {
 
     const api = process.env.REACT_APP_SERVER_HOST;
 
-    useEffect(() => {
-        // Function to fetch the access token
-        const accessTokenFactory = async () => {
-            try {
-                const response = await fetch(`${api}/auth`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error ${response.status}`);
-                }
-                return await response.text(); // Return the access token as plain text
-            } catch (error) {
-                console.error("Error fetching access token:", error);
-                throw error;
+    // Function to fetch the access token
+    const accessTokenFactory = async () => {
+        try {
+            const response = await fetch(`${api}/auth`);
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
             }
-        };
+            return await response.text(); // Return the access token as plain text
+        } catch (error) {
+            console.error("Error fetching access token:", error);
+            throw error;
+        }
+    };
 
+    const connect = async () => {
         // Create a new SignalR connection
         const newConnection = new signalR.HubConnectionBuilder()
             .withUrl(`${api}/huh`, { accessTokenFactory })
@@ -51,37 +51,14 @@ const App = () => {
             setData(prevData => [...prevData, timestamp]); // Append new data to the existing data array
         });
 
-        setConnection(newConnection);
-    }, [api]);
-
-    useEffect(() => {
-        // Start the connection when it is established
-        const startConnection = async () => {
-            if (connection) {
-                try {
-                    await connection.start();
-                    console.log('Connected!');
-                    setConnectionStatus('Connected'); // Update status to Connected
-                } catch (e) {
-                    console.error('Connection failed: ', e);
-                    setConnectionStatus('Disconnected'); // Update status to Disconnected
-                }
-            }
-        };
-
-        startConnection();
-    }, [connection]);
-
-    const connect = async () => {
-        if (connection && connection.state === signalR.HubConnectionState.Disconnected) {
-            await connection.start();
-            setConnectionStatus('Connected'); // Update status to Disconnected
-        }
-    };
-
-    const feed = async () => {
-        if (connection && connection.state === signalR.HubConnectionState.Connected) {
-            await connection.invoke('Feed');
+        try {
+            await newConnection.start();
+            console.log('Connected!');
+            setConnectionStatus('Connected'); // Update status to Connected
+            setConnection(newConnection); // Store the new connection
+        } catch (e) {
+            console.error('Connection failed: ', e);
+            setConnectionStatus('Disconnected'); // Update status to Disconnected
         }
     };
 
@@ -89,6 +66,7 @@ const App = () => {
         if (connection && connection.state === signalR.HubConnectionState.Connected) {
             await connection.stop();
             setConnectionStatus('Disconnected'); // Update status to Disconnected
+            setConnection(null); // Clear the connection
         }
     };
 
@@ -96,9 +74,8 @@ const App = () => {
         <div>
             <h1>SignalR</h1>
             <h2>Status: {connectionStatus}</h2>
-            <button onClick={connect}>Connect</button>
-            <button onClick={stop}>Disconnect</button>
-            <button onClick={feed}>Receive Data</button>
+            <button onClick={connect}>Subscribe</button>
+            <button onClick={stop}>Unsubscribe</button>
 
             {/* Display incoming data */}
             <div>
