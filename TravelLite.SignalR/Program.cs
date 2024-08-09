@@ -42,11 +42,9 @@ builder.Services.AddSignalR(_ => { });
 
 var app = builder.Build();
 
+app.UseSwagger();
 if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
     app.UseSwaggerUI();
-}
 
 //app.UseHttpsRedirection();
 app.UseCors(_ => _.SetIsOriginAllowed(_ => true)
