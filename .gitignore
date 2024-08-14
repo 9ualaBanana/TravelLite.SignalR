@@ -7,7 +7,7 @@
 .env
 
 # User-specific files
-TravelLite.SignalR/appsettings.json
+*/appsettings.json
 *.rsuser
 *.suo
 *.user
