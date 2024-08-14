@@ -30,9 +30,6 @@ builder.Services.AddAuthentication().AddJwtBearer(_ =>
         IgnoreTrailingSlashWhenValidatingAudience = true,
         ValidAudience = jwtOptions.Aud,
 
-        ValidateTokenReplay = true,
-        TokenReplayCache = new TokenReplayCache(),
-
         IncludeTokenOnFailedValidation = true
     };
     // SignalR sends access token as query parameter (except for initial connection as `Authorization: Bearer` header).
@@ -98,14 +95,3 @@ app.MapGet("/auth", () =>
 });
 
 app.Run();
-
-class TokenReplayCache(/*IDistributedCache Cache*/) : ITokenReplayCache
-{
-    readonly Dictionary<string, DateTime> _ = [];
-
-    public bool TryAdd(string securityToken, DateTime expiresOn)
-        => _.TryAdd(securityToken, expiresOn);
-
-    public bool TryFind(string securityToken)
-        => _.TryGetValue(securityToken, out DateTime _);
-}
