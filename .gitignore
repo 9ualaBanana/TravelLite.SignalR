@@ -7,7 +7,6 @@
 .env
 
 # User-specific files
-*/appsettings.json
 *.rsuser
 *.suo
 *.user
