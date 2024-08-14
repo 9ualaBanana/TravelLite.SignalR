@@ -9,20 +9,32 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? throw new Exception("JWT is not configured.");
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddCors();
 builder.Services.AddAuthentication().AddJwtBearer(_ =>
 {
-    var secret = builder.Configuration.GetValue<string>("Jwt") ?? throw new Exception();
-    // Configure JWT
     _.TokenValidationParameters = new()
     {
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+        ValidateIssuer = true,
+        ValidIssuer = jwtOptions.Iss,
+        
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)),
 
-        ValidateIssuer = false,
-        ValidateAudience = false
+        ValidateLifetime = true,
+        RequireExpirationTime = true,
+        ClockSkew = TimeSpan.Zero,
+
+        ValidateAudience = true,
+        RequireAudience = true,
+        IgnoreTrailingSlashWhenValidatingAudience = true,
+        ValidAudience = jwtOptions.Aud,
+
+        IncludeTokenOnFailedValidation = true
     };
     // SignalR sends access token as query parameter (except for initial connection as `Authorization: Bearer` header).
     _.Events = new JwtBearerEvents
@@ -47,6 +59,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 
 //app.UseHttpsRedirection();
+// Loose CORS in case you want to implement custom client.
 app.UseCors(_ => _.SetIsOriginAllowed(_ => true)
                   .AllowCredentials()
                   .AllowAnyHeader()
@@ -64,19 +77,20 @@ app.MapGet("/", (HttpContext ctx) =>
 
 app.MapGet("/auth", () =>
 {
-    var secret = builder.Configuration.GetValue<string>("Jwt") ?? throw new Exception();
     var now = DateTime.UtcNow;
     var tokenDescriptor = new SecurityTokenDescriptor
     {
         Subject = new ClaimsIdentity(
         [
             new Claim(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         ]),
-        Audience = "any",
+        Issuer = jwtOptions.Iss,
+        Audience = jwtOptions.Aud,
         IssuedAt = now,
-        Expires = now.AddMinutes(5),
-        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)), SecurityAlgorithms.HmacSha512Signature)
+        NotBefore = now,
+        Expires = now.AddSeconds(jwtOptions.Exp),
+        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)), SecurityAlgorithms.HmacSha512Signature)
     };
     var tokenHandler = new JwtSecurityTokenHandler();
     var token = tokenHandler.CreateToken(tokenDescriptor);
@@ -122,3 +136,5 @@ public class Huh : Hub
         Console.WriteLine($"Disconnected: {Context.ConnectionId}");
     }
 }
+
+public record JwtOptions(string Secret, string Iss, string Aud, int Exp);
