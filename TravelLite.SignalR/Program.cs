@@ -23,7 +23,7 @@ builder.Services.AddAuthentication().AddJwtBearer(_ =>
         ValidIssuer = jwtOptions.Iss,
         
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)),
+        IssuerSigningKey = jwtOptions.Key.Value,
 
         ValidateLifetime = true,
         RequireExpirationTime = true,
@@ -90,7 +90,7 @@ app.MapGet("/auth", () =>
         IssuedAt = now,
         NotBefore = now,
         Expires = now.AddSeconds(jwtOptions.Exp),
-        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)), SecurityAlgorithms.HmacSha512Signature)
+        SigningCredentials = new SigningCredentials(jwtOptions.Key.Value, SecurityAlgorithms.HmacSha512Signature)
     };
     var tokenHandler = new JwtSecurityTokenHandler();
     var token = tokenHandler.CreateToken(tokenDescriptor);
@@ -137,4 +137,7 @@ public class Huh : Hub
     }
 }
 
-public record JwtOptions(string Secret, string Iss, string Aud, int Exp);
+public record JwtOptions(string Secret, string Iss, string Aud, int Exp)
+{
+    internal Lazy<SymmetricSecurityKey> Key = new(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Secret)));
+}
